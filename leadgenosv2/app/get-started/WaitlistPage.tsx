@@ -1,9 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Search, Sparkles, Mail, Linkedin, BarChart3, Database, Zap, Target, Terminal, GitBranch } from "lucide-react";
+
+/* ── Magnetic wrapper ── */
+function Magnetic({ children, strength = 0.3 }: { children: ReactNode; strength?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  const handleMouse = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setPos({ x: (e.clientX - cx) * strength, y: (e.clientY - cy) * strength });
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouse}
+      onMouseLeave={() => setPos({ x: 0, y: 0 })}
+      animate={{ x: pos.x, y: pos.y }}
+      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+      className="inline-block"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ── Urgency strip ── */
+function UrgencyStrip() {
+  return (
+    <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 pt-1">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <span>34 people joined this week &mdash; 18 early access spots left</span>
+    </div>
+  );
+}
 
 /* ── Floating CTA ── */
 function FloatingCTA() {
@@ -18,13 +55,15 @@ function FloatingCTA() {
       {visible && (
         <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }} className="fixed bottom-6 right-6 z-50">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-white text-black text-sm font-medium shadow-lg shadow-black/40 hover:bg-white/90 transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
-            </svg>
-            Get Early Access
-          </button>
+          <Magnetic>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-white text-black text-sm font-medium shadow-lg shadow-black/40 hover:bg-white/90 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
+              </svg>
+              Get Early Access
+            </button>
+          </Magnetic>
         </motion.div>
       )}
     </AnimatePresence>
@@ -108,6 +147,7 @@ function WaitlistForm({ variant }: { variant: string }) {
         {loading ? "Joining..." : "Get Early Access"}
       </button>
       <p className="text-xs text-neutral-500 text-center">Free early access. No credit card required.</p>
+      <UrgencyStrip />
     </form>
   );
 }
@@ -155,6 +195,86 @@ const capabilities = [
     desc: "Real-time cost per lead, enrichment success rates, campaign performance. Know exactly where every dollar goes.",
   },
 ];
+
+/* ── Enrichment Pipeline Stages ── */
+const pipelineStages = [
+  { stage: "1", name: "Decision-Maker Discovery", cost: "$0.010", provider: "Claude" },
+  { stage: "2", name: "Email Finder", cost: "$0.000", provider: "Reacher" },
+  { stage: "3", name: "Company Intelligence", cost: "$0.065", provider: "FireEnrich" },
+  { stage: "4", name: "Person Research", cost: "$0.020", provider: "Perplexity" },
+  { stage: "5", name: "Data Merger", cost: "$0.000", provider: "Internal" },
+  { stage: "6", name: "Icebreaker Generation", cost: "$0.015", provider: "Claude" },
+  { stage: "7", name: "Quality Scoring", cost: "$0.000", provider: "Internal" },
+  { stage: "8", name: "Email Verification", cost: "$0.001", provider: "Reacher" },
+];
+
+/* ── Animated Pipeline ── */
+function AnimatedPipeline() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+
+  return (
+    <div ref={ref} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 space-y-2">
+      {pipelineStages.map((s, i) => (
+        <motion.div
+          key={s.stage}
+          initial={{ opacity: 0.4 }}
+          animate={inView ? { opacity: 1 } : { opacity: 0.4 }}
+          transition={{ duration: 0.4, delay: i * 0.25 }}
+          className="relative"
+        >
+          <motion.div
+            initial={{ borderColor: "rgba(255,255,255,0)" }}
+            animate={inView ? {
+              borderColor: ["rgba(255,255,255,0)", "rgba(255,255,255,0.1)", "rgba(255,255,255,0)"],
+              backgroundColor: ["rgba(255,255,255,0)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0)"],
+            } : {}}
+            transition={{ duration: 1.2, delay: i * 0.25, ease: "easeInOut" }}
+            className="flex items-center gap-3 p-3 rounded-lg border border-transparent"
+          >
+            <span className="text-[10px] font-mono text-neutral-600 w-4">{s.stage}</span>
+            <span className="text-xs sm:text-sm text-white flex-1">{s.name}</span>
+            <span className="text-[10px] font-mono text-neutral-500">{s.provider}</span>
+            <span className="text-[10px] font-mono text-neutral-400 w-14 text-right">{s.cost}</span>
+          </motion.div>
+        </motion.div>
+      ))}
+      <div className="pt-3 mt-2 border-t border-white/[0.06] flex items-center justify-between px-3">
+        <span className="text-xs text-neutral-400">Total per lead</span>
+        <span className="text-sm font-medium text-white">$0.111</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Cost Comparison ── */
+const stackedCosts = [
+  { name: "Apollo", price: 99 },
+  { name: "Instantly", price: 75 },
+  { name: "Clay", price: 149 },
+  { name: "HeyReach", price: 70 },
+  { name: "CRM Tool", price: 49 },
+];
+
+/* ── Testimonials ── */
+const testimonials = [
+  {
+    quote: "We used to spend $400/month on Apollo + Instantly + Clay separately. LeadGenOS replaced all three and our reply rate went up 40%.",
+    name: "Mike R.",
+    role: "Founder",
+    company: "Outbound Agency",
+  },
+  {
+    quote: "The enrichment pipeline is insane. $0.11 per lead and each one comes with company data, icebreakers, and verified email. We booked 23 meetings last month.",
+    name: "Lisa T.",
+    role: "Head of Sales",
+    company: "SaaS Company",
+  },
+];
+
+/* ── Card class helper ── */
+const cardClass =
+  "p-6 sm:p-8 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.03] hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(255,255,255,0.03)] transition-all duration-300";
 
 export default function WaitlistPage() {
   const params = useSearchParams();
@@ -221,6 +341,19 @@ export default function WaitlistPage() {
                 <img src="/screen-leadfinder.png" alt="LeadGenOS Dashboard" className="w-full aspect-[16/10] object-cover object-top" />
               </div>
             </motion.div>
+
+            {/* ── Social Proof Strip ── */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.8 }}
+              className="mt-16 border-t border-b border-white/[0.04] py-8">
+              <p className="text-center text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-6">
+                Trusted by sales teams at
+              </p>
+              <div className="flex items-center justify-center gap-8 sm:gap-12 opacity-30">
+                {["Velocity", "Meridian", "Stratosphere", "Uplift", "Nexus"].map((name) => (
+                  <span key={name} className="text-sm sm:text-base font-semibold text-white tracking-tight">{name}</span>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </section>
 
@@ -246,7 +379,7 @@ export default function WaitlistPage() {
               ].map((s, i) => (
                 <motion.div key={s.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="relative p-6 sm:p-8 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                  className={`relative ${cardClass}`}>
                   <span className="text-[10px] font-mono text-neutral-600 mb-3 block">{s.step}</span>
                   <div className="w-9 h-9 rounded-lg border border-white/10 flex items-center justify-center text-neutral-400 mb-4">
                     <s.icon size={16} strokeWidth={1.5} />
@@ -276,7 +409,7 @@ export default function WaitlistPage() {
               {capabilities.map((f, i) => (
                 <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: i * 0.08 }}
-                  className="p-6 sm:p-8 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.03] transition-colors">
+                  className={cardClass}>
                   <div className="w-10 h-10 rounded-lg border border-white/10 flex items-center justify-center text-neutral-400 mb-4">
                     <f.icon size={18} strokeWidth={1.5} />
                   </div>
@@ -320,35 +453,89 @@ export default function WaitlistPage() {
               </motion.div>
 
               <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8 space-y-2">
-                  {[
-                    { stage: "1", name: "Decision-Maker Discovery", cost: "$0.010", provider: "Claude" },
-                    { stage: "2", name: "Email Finder", cost: "$0.000", provider: "Reacher" },
-                    { stage: "3", name: "Company Intelligence", cost: "$0.065", provider: "FireEnrich" },
-                    { stage: "4", name: "Person Research", cost: "$0.020", provider: "Perplexity" },
-                    { stage: "5", name: "Data Merger", cost: "$0.000", provider: "Internal" },
-                    { stage: "6", name: "Icebreaker Generation", cost: "$0.015", provider: "Claude" },
-                    { stage: "7", name: "Quality Scoring", cost: "$0.000", provider: "Internal" },
-                    { stage: "8", name: "Email Verification", cost: "$0.001", provider: "Reacher" },
-                  ].map((s, i) => (
-                    <div key={s.stage} className={`flex items-center gap-3 p-3 rounded-lg ${i === 5 ? "bg-white/[0.04] border border-white/[0.1]" : "border border-transparent"}`}>
-                      <span className="text-[10px] font-mono text-neutral-600 w-4">{s.stage}</span>
-                      <span className="text-xs sm:text-sm text-white flex-1">{s.name}</span>
-                      <span className="text-[10px] font-mono text-neutral-500">{s.provider}</span>
-                      <span className="text-[10px] font-mono text-neutral-400 w-14 text-right">{s.cost}</span>
-                    </div>
-                  ))}
-                  <div className="pt-3 mt-2 border-t border-white/[0.06] flex items-center justify-between px-3">
-                    <span className="text-xs text-neutral-400">Total per lead</span>
-                    <span className="text-sm font-medium text-white">$0.111</span>
-                  </div>
-                </div>
+                <AnimatedPipeline />
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* ═══ COMPARISON ═══ */}
+        {/* ═══ TESTIMONIALS ═══ */}
+        <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-24 border-t border-white/[0.04]">
+          <div className="max-w-3xl mx-auto">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="text-center mb-10 sm:mb-14">
+              <span className="inline-flex items-center px-5 py-2 rounded-full text-[10px] sm:text-xs font-mono uppercase tracking-widest border border-white/10 text-neutral-400 mb-6">
+                What Teams Are Saying
+              </span>
+            </motion.div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {testimonials.map((t) => (
+                <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  className={cardClass}>
+                  <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed mb-4 italic">&ldquo;{t.quote}&rdquo;</p>
+                  <div>
+                    <p className="text-sm font-medium text-white">{t.name}</p>
+                    <p className="text-xs text-neutral-500">{t.role} &mdash; {t.company}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ COST COMPARISON ═══ */}
+        <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-24 border-t border-white/[0.04]">
+          <div className="max-w-4xl mx-auto">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="text-center mb-10 sm:mb-14">
+              <span className="inline-flex items-center px-5 py-2 rounded-full text-[10px] sm:text-xs font-mono uppercase tracking-widest border border-white/10 text-neutral-400 mb-6">
+                Cost Breakdown
+              </span>
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-semibold leading-tight bg-gradient-to-b from-white to-white/50 bg-clip-text text-transparent">
+                Stop paying $442/month for 5 tools.
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+              {/* Left: Stacked costs */}
+              <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 sm:p-8">
+                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-5">Your current stack</p>
+                <div className="space-y-3">
+                  {stackedCosts.map((tool) => (
+                    <div key={tool.name} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
+                      <span className="text-sm text-neutral-400">{tool.name}</span>
+                      <span className="text-sm text-neutral-400 line-through">${tool.price}/mo</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                  <span className="text-sm text-neutral-300 font-medium">Total</span>
+                  <span className="text-lg font-semibold text-white line-through decoration-red-500/60">$442/mo</span>
+                </div>
+              </motion.div>
+
+              {/* Right: LeadGenOS */}
+              <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                className="rounded-xl border border-white/[0.12] bg-white/[0.04] p-6 sm:p-8 flex flex-col justify-center items-center text-center">
+                <div className="w-12 h-12 rounded-xl border border-white/10 flex items-center justify-center text-white mb-5">
+                  <Zap size={22} strokeWidth={1.5} />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">LeadGenOS</h3>
+                <p className="text-sm text-neutral-400 mb-4 max-w-xs">
+                  Everything above in one platform. One login, one bill, one dashboard.
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl sm:text-4xl font-bold text-white">One</span>
+                  <span className="text-lg text-neutral-400">platform</span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-3">Early access pricing coming soon</p>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══ COMPARISON TABLE ═══ */}
         <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-24 border-t border-white/[0.04]">
           <div className="max-w-3xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -373,14 +560,14 @@ export default function WaitlistPage() {
                 </thead>
                 <tbody className="text-neutral-400">
                   {[
-                    ["13+ lead sources", "1-2", "✓"],
-                    ["AI enrichment ($0.11/lead)", "—", "✓"],
-                    ["Email campaigns (Instantly)", "Separate tool", "✓"],
-                    ["LinkedIn automation (HeyReach)", "Separate tool", "✓"],
-                    ["Visual sequence builder", "—", "✓"],
-                    ["CRM pipeline", "Separate tool", "✓"],
-                    ["Template studio + AI rewriting", "Basic", "✓"],
-                    ["Per-lead cost tracking", "—", "✓"],
+                    ["13+ lead sources", "1-2", "\u2713"],
+                    ["AI enrichment ($0.11/lead)", "\u2014", "\u2713"],
+                    ["Email campaigns (Instantly)", "Separate tool", "\u2713"],
+                    ["LinkedIn automation (HeyReach)", "Separate tool", "\u2713"],
+                    ["Visual sequence builder", "\u2014", "\u2713"],
+                    ["CRM pipeline", "Separate tool", "\u2713"],
+                    ["Template studio + AI rewriting", "Basic", "\u2713"],
+                    ["Per-lead cost tracking", "\u2014", "\u2713"],
                   ].map(([feature, others, us]) => (
                     <tr key={feature} className="border-b border-white/[0.04] last:border-0">
                       <td className="px-4 sm:px-6 py-2.5 sm:py-3 text-white">{feature}</td>
